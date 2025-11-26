@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="GOROOT" url="file://C:/Program Files/Go" />
+  <component name="GoLibraries">
+    <option name="urls">
+      <list>
+        <option value="file://C:/GoProject/learning" />
+      </list>
+    </option>
+  </component>
+  <component name="VgoProject">
+    <environment>
+      <map>
+        <entry key="GO111MODULE" value="auto" />
+      </map>
+    </environment>
+  </component>
+</project>
