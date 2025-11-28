@@ -9,27 +9,36 @@ import (
 	"time"
 
 	"25.11.2025/models"
+	"25.11.2025/services"
 	"25.11.2025/worker"
 )
 
-type TaskManager struct {
-	TaskQueue   chan models.TaskWorker
-	taskList    map[int]models.Task
-	сacheStatus map[string]models.LinkStatus
-	Cached      bool
-	count       int
-	Wg          sync.WaitGroup
-	Mu          sync.Mutex
-	isRunning   bool
+type TaskManagerConfig struct {
+	QueueCapacity int
+	Cached        bool
+	DataFileName  string
 }
 
-func NewTaskManager(queueCapacity int, cached bool) *TaskManager {
-	fmt.Println("Создание TaskManager с очередью емкостью", queueCapacity, "и кэшированием:", cached)
+type TaskManager struct {
+	TaskQueue    chan models.TaskWorker
+	taskList     map[int]models.Task
+	сacheStatus  map[string]models.LinkStatus
+	DataFileName string
+	Cached       bool
+	count        int
+	Wg           sync.WaitGroup
+	Mu           sync.Mutex
+	isRunning    bool
+}
+
+func NewTaskManager(config TaskManagerConfig) *TaskManager {
+	//fmt.Println("Создание TaskManager с очередью емкостью", config.QueueCapacity, "и кэшированием:", config.Cached)
 	return &TaskManager{
-		TaskQueue:   make(chan models.TaskWorker, queueCapacity),
-		taskList:    make(map[int]models.Task),
-		сacheStatus: make(map[string]models.LinkStatus),
-		Cached:      cached,
+		TaskQueue:    make(chan models.TaskWorker, config.QueueCapacity),
+		taskList:     make(map[int]models.Task),
+		сacheStatus:  make(map[string]models.LinkStatus),
+		DataFileName: config.DataFileName,
+		Cached:       config.Cached,
 	}
 }
 
@@ -54,16 +63,16 @@ func (tm *TaskManager) CacheUrlGet(link string) (models.LinkStatus, bool) {
 	}
 }
 
-func (tm *TaskManager) AddTask(req models.TaskRequest, respChan chan models.TaskResponse, ctx context.Context) {
-	tm.Mu.Lock()
-	tm.count++
-	id := tm.count
-	task := models.Task{
-		LinksNum: id,
-	}
+func (tm *TaskManager) AddTask(req models.TaskLinksRequest, respChan chan models.TaskResponse, ctx context.Context, isReport bool) {
+	var task models.Task
 	task.Links = req.Links
-	tm.taskList[id] = task
-	tm.Mu.Unlock()
+	if !isReport {
+		tm.Mu.Lock()
+		tm.count++
+		task.LinksNum = tm.count
+		tm.taskList[task.LinksNum] = task
+		tm.Mu.Unlock()
+	}
 	work := models.TaskWorker{
 		Task:            task,
 		Ctx:             ctx,
@@ -82,10 +91,16 @@ func (tm *TaskManager) IsWork() bool {
 }
 
 func (tm *TaskManager) Start() {
-	tm.Mu.Lock()
-	defer tm.Mu.Unlock()
 	if tm.isRunning {
 		return
+	}
+	readData, err := services.ReadDataRequest(tm.DataFileName)
+	if err == nil {
+		tm.taskList = readData
+		tm.count = len(readData)
+		fmt.Println("Загружено задач из файла:", tm.DataFileName)
+	} else {
+		fmt.Println("Не удалось загрузить задачи из файла:", err)
 	}
 	tm.isRunning = true
 	numWorkers := runtime.GOMAXPROCS(0) * 10
@@ -100,10 +115,14 @@ func (tm *TaskManager) Start() {
 }
 
 func (tm *TaskManager) Stop(serv *http.Server) error {
-	tm.Mu.Lock()
-	defer tm.Mu.Unlock()
 	tm.isRunning = false
 	close(tm.TaskQueue)
 	tm.Wg.Wait()
+	err := services.SaveDataRequest(tm.taskList, tm.DataFileName)
+	if err != nil {
+		fmt.Println("Ошибка сохранения данных в файл:", err)
+	} else {
+		fmt.Println("Данные успешно сохранены в файл:", tm.DataFileName)
+	}
 	return serv.Shutdown(context.Background())
 }

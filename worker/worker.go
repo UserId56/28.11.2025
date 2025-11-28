@@ -2,9 +2,7 @@ package worker
 
 import (
 	"context"
-	"fmt"
 	"sync"
-	"time"
 
 	"25.11.2025/internal"
 	"25.11.2025/models"
@@ -12,10 +10,10 @@ import (
 
 func New(wg *sync.WaitGroup, tq chan models.TaskWorker, num int, writeCache func(status models.LinkStatus), getCache func(link string) (models.LinkStatus, bool)) {
 	defer wg.Done()
-	fmt.Printf("Worker #%d запущен\n", num)
+	//fmt.Printf("Worker #%d запущен\n", num)
 	for task := range tq {
-		startTime := time.Now()
-		fmt.Printf("Worker #%d Выолняю задачу №%d\n", num, task.Task.LinksNum)
+		//startTime := time.Now()
+		//fmt.Printf("Worker #%d Выолняю задачу №%d\n", num, task.Task.LinksNum)
 		var results models.TaskResponse
 		results.LinksNum = task.LinksNum
 		results.Links = make(map[string]string)
@@ -24,7 +22,7 @@ func New(wg *sync.WaitGroup, tq chan models.TaskWorker, num int, writeCache func
 		resChan := make(chan models.LinkStatus, len(task.Links))
 		for _, link := range task.Links {
 			if cachedStatus, exists := getCache(link); exists {
-				fmt.Printf("Worker #%d: Используется кэш для %s\n", num, link)
+				//fmt.Printf("Worker #%d: Используется кэш для %s\n", num, link)
 				results.Links[link] = cachedStatus.Status
 				continue
 			}
@@ -54,10 +52,10 @@ func New(wg *sync.WaitGroup, tq chan models.TaskWorker, num int, writeCache func
 		cancelCheckCtx()
 		select {
 		case task.ResponseChannel <- results:
-			workTime := time.Since(startTime)
-			fmt.Println("Задача №", task.Task.LinksNum, "выполнена за", workTime, "секунд")
+			//workTime := time.Since(startTime)
+			//fmt.Println("Задача №", task.Task.LinksNum, "выполнена за", workTime, "секунд")
 		case <-task.Ctx.Done():
-			fmt.Println("Контекст задачи №", task.Task.LinksNum, "отменен до отправки результата")
+			//fmt.Println("Контекст задачи №", task.Task.LinksNum, "отменен до отправки результата")
 		}
 	}
 }

@@ -2,13 +2,13 @@ package models
 
 import "context"
 
-type TaskRequest struct {
-	Links []string `json:"links"`
+type TaskLinksRequest struct {
+	Links []string `json:"links" binding:"required,min=1"`
 }
 
 type Task struct {
 	LinksNum int
-	TaskRequest
+	TaskLinksRequest
 }
 
 type TaskResponse struct {
@@ -21,4 +21,8 @@ type TaskWorker struct {
 	Task
 	Ctx             context.Context
 	ResponseChannel chan TaskResponse
+}
+
+type TaskReportRequest struct {
+	LinksNum []int `json:"links_num" binding:"required,min=1"`
 }
