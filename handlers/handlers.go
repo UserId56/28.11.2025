@@ -17,7 +17,7 @@ func GetStatus(tm *controllers.TaskManager) gin.HandlerFunc {
 			return
 		}
 		respChan := make(chan models.TaskResponse, 1)
-		perLink := 1 * time.Second
+		perLink := 5 * time.Second
 		margin := 2 * time.Second
 		capTimeout := 30 * time.Second
 		overall := time.Duration(len(req.Links))*perLink + margin

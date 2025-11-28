@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
 
 	"25.11.2025/controllers"
@@ -13,9 +14,8 @@ import (
 )
 
 func main() {
-
 	r := gin.Default()
-	tm := controllers.NewTaskManager(10)
+	tm := controllers.NewTaskManager(runtime.GOMAXPROCS(0)*10, true)
 	tm.Start()
 	routes.Init(r, tm)
 	server := &http.Server{
